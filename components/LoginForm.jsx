@@ -1,0 +1,15 @@
+'use client';
+import {useEffect,useState} from 'react';
+export default function LoginForm(){
+ const [mode,setMode]=useState('admin'),[email,setEmail]=useState(''),[code,setCode]=useState(''),[step,setStep]=useState(1),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('');
+ useEffect(()=>{const params=new URLSearchParams(location.search);setMode(params.get('next')==='/user'?'user':'admin');if(params.get('error'))setError('Please sign in through Manage Tech Services.');},[]);
+ async function call(path,body){const resp=await fetch(path,{method:'POST',headers:{'content-type':'application/json','x-mts-action':'1'},body:JSON.stringify(body),cache:'no-store'});const data=await resp.json().catch(()=>({}));if(!resp.ok)throw Error(data.error||`HTTP ${resp.status}`);return data;}
+ async function submit(e){e.preventDefault();setBusy(true);setError('');try{
+  if(step===1){const result=await call('/api/auth/request-code',{email,mode});setMessage(result.message);setStep(2)}
+  else{const result=await call('/api/auth/verify-code',{mode,code});window.location.replace(result.redirect)}
+ }catch(e){setError(e.message)}finally{setBusy(false)}}
+ return <main className="welcome-layout"><div className="welcome-panel"><a className="brand-mark" href="/">M</a><span className="eyebrow">MANAGE TECH SERVICES</span><h1>Welcome back.</h1><p>Sign in securely to your ManageTech workspace. Zendesk stays in the background.</p><div className="login-switch"><button type="button" className={mode==='admin'?'selected':''} onClick={()=>{setMode('admin');setStep(1);setCode('');setError('')}}>Staff / Admin</button><button type="button" className={mode==='user'?'selected':''} onClick={()=>{setMode('user');setStep(1);setCode('');setError('')}}>Customer</button></div><form className="login-form" onSubmit={submit}>
+  <label>{step===1?'Work email address':'Six-digit sign-in code'}{step===1?<input autoFocus type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" required autoComplete="email"/>:<input autoFocus value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,'').slice(0,6))} required inputMode="numeric" pattern="[0-9]{6}" autoComplete="one-time-code" placeholder="000000"/>}</label>
+  {message&&step===2?<p className="helper">{message}</p>:null}{error?<p className="warning" role="alert">{error}</p>:null}<button className="button primary" disabled={busy} type="submit">{busy?'Please wait…':step===1?'Email me a code':'Verify and continue'}</button>{step===2?<button className="button outline" type="button" onClick={()=>{setStep(1);setCode('');setError('')}}>Use another email</button>:null}
+ </form><div className="welcome-foot">No Zendesk login screen · No separate customer database</div></div><aside className="welcome-side"><span className="eyebrow">YOUR MTS WORKSPACE</span><h2>One brand.<br/>Two secure portals.</h2><div className="welcome-feature">Admin &amp; staff <span>/admin</span></div><div className="welcome-feature">Customer self-service <span>/user</span></div><div className="welcome-feature">Helpdesk and CRM <span>Live Zendesk data</span></div></aside></main>
+}
